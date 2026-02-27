@@ -73,7 +73,11 @@ def _render_image_upload() -> bool:
     provider_label = provider_labels.get(provider, "")
 
     if provider != "none":
-        st.caption(f"AI Provider: **{provider_label}**")
+        from services.vision_analyzer import _get_secret
+        key_map = {"openai": "OPENAI_API_KEY", "gemini": "GEMINI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
+        key_val = _get_secret(key_map.get(provider, "")) or ""
+        key_hint = f"...{key_val[-4:]}" if len(key_val) > 4 else "not set"
+        st.caption(f"AI Provider: **{provider_label}** (`{key_hint}`)")
 
     # Show what AI already detected
     if st.session_state.get("ai_analyzed"):
