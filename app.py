@@ -342,6 +342,13 @@ def _handle_ai_analysis():
             st.session_state.building_roof_pitch = max(5.0, min(75.0, g.roof_pitch))
             st.session_state.building_orientation = max(0.0, min(359.0, g.orientation))
 
+            # Clear widget keys so they pick up the new values on rerun
+            for wkey in [
+                "input_width", "input_depth", "input_wall_height",
+                "input_roof_type", "input_roof_pitch", "input_orientation",
+            ]:
+                st.session_state.pop(wkey, None)
+
             st.toast(
                 f"AI detected: {g.width:.0f}x{g.depth:.0f}m, "
                 f"{g.wall_height:.0f}m tall, {g.roof_type} roof "
