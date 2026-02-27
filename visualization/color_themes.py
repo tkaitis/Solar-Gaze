@@ -1,0 +1,18 @@
+COLORS = {
+    "building": "rgb(120, 140, 160)",
+    "building_edge": "rgb(60, 80, 100)",
+    "ground": "rgb(200, 210, 190)",
+    "ground_grid": "rgba(150, 160, 140, 0.3)",
+    "shadow": "rgba(40, 40, 60, 0.35)",
+    "sun": "rgb(255, 200, 50)",
+    "sun_path": "rgb(255, 165, 0)",
+    "sun_marker": "rgba(255, 200, 50, 0.5)",
+    "compass_n": "rgb(220, 50, 50)",
+    "compass_s": "rgb(50, 50, 220)",
+    "compass_e": "rgb(100, 100, 100)",
+    "compass_w": "rgb(100, 100, 100)",
+    "tree": "rgb(60, 140, 60)",
+    "structure": "rgb(160, 140, 120)",
+    "background": "rgb(240, 245, 250)",
+    "text": "rgb(60, 60, 80)",
+}
