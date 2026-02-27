@@ -333,14 +333,14 @@ def _handle_ai_analysis():
             st.session_state["ai_analysis"] = analysis
             st.session_state["ai_analyzed"] = True
 
-            # Apply AI-detected geometry to building controls
+            # Apply AI-detected geometry — clamp to widget limits
             g = analysis.geometry
-            st.session_state.building_width = g.width
-            st.session_state.building_depth = g.depth
-            st.session_state.building_wall_height = g.wall_height
+            st.session_state.building_width = max(1.0, min(200.0, g.width))
+            st.session_state.building_depth = max(1.0, min(200.0, g.depth))
+            st.session_state.building_wall_height = max(1.0, min(100.0, g.wall_height))
             st.session_state.building_roof_type = g.roof_type
-            st.session_state.building_roof_pitch = g.roof_pitch
-            st.session_state.building_orientation = g.orientation
+            st.session_state.building_roof_pitch = max(5.0, min(75.0, g.roof_pitch))
+            st.session_state.building_orientation = max(0.0, min(359.0, g.orientation))
 
             st.toast(
                 f"AI detected: {g.width:.0f}x{g.depth:.0f}m, "

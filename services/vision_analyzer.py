@@ -22,45 +22,71 @@ def _get_secret(key: str) -> str | None:
     except Exception:
         return None
 
-VISION_PROMPT = """Analyze this building image and extract structural measurements.
+VISION_PROMPT = """You are an expert architectural surveyor. Analyze the building image(s) and extract precise structural measurements for a 3D model.
 
-Use these scale references to estimate dimensions:
-- Standard door height: ~2.1m
-- Standard window: ~1.2m wide x 1.5m tall
-- Garage door: ~2.4m high x 5m wide
-- Average car length: ~4.5m
-- Story height: ~3.0m (residential), ~4.0m (commercial)
-- Standard brick: 215mm x 65mm
+STEP 1 — IDENTIFY SCALE REFERENCES in the image. Look for ANY of these and count them:
+- Doors (standard ~2.1m tall, ~0.9m wide)
+- Windows (standard ~1.2m wide x 1.5m tall)
+- Garage doors (~2.4m tall x 5m wide)
+- Cars (~4.5m long x 1.8m wide)
+- People (~1.7m tall)
+- Story height: ~3.0m residential, ~3.5m commercial, ~4.5m industrial
+- Standard brick: 215mm x 65mm (count visible courses)
+- Pavement slabs: typically 600mm x 600mm
+- Road lane width: ~3.5m
 
-Return a JSON object with EXACTLY this structure (no markdown, no code fences):
+STEP 2 — MEASURE THE BUILDING using those references:
+- WIDTH: the building's longest horizontal face dimension (meters)
+- DEPTH: the perpendicular dimension (meters). If only one view, estimate depth as 60-80% of width for residential, 50-70% for commercial.
+- WALL HEIGHT: measure from ground to where the roof starts (eave line), NOT to the roof peak. Count stories x story height. A 2-story house is typically 6-7m wall height.
+- ROOF PITCH: estimate the angle of the roof slope in degrees. A shallow roof is 15-20°, moderate is 25-35°, steep is 40-55°.
+
+STEP 3 — IDENTIFY THE ROOF TYPE. Choose the BEST match:
+- "flat" — no visible slope, may have parapet
+- "gable" — classic triangle, two sloping sides meeting at a ridge
+- "hip" — all four sides slope inward to the ridge
+- "shed" — single slope, one side higher than the other
+- "mansard" — steep lower slope, shallow upper slope (French style)
+- "gambrel" — barn-style, each side has two slopes (steep lower, shallow upper)
+- "butterfly" — V-shaped, two slopes angling down toward center
+- "sawtooth" — repeating ridges (industrial/factory)
+- "dutch_gable" — hip roof with a small gable (vertical triangle) at the top
+
+STEP 4 — ESTIMATE ORIENTATION from aerial view (if available):
+- 0° = front faces North, 90° = front faces East, 180° = front faces South, 270° = front faces West
+- If no aerial view, use 0° as default
+
+CONSTRAINTS — values must stay within these ranges:
+- width: 1.0 to 200.0 meters
+- depth: 1.0 to 200.0 meters
+- wall_height: 1.0 to 100.0 meters
+- roof_pitch: 5.0 to 75.0 degrees
+- orientation: 0.0 to 359.0 degrees
+
+Return ONLY a JSON object (no markdown, no code fences, no explanation):
 {
     "geometry": {
-        "width": <float, east-west dimension in meters>,
-        "depth": <float, north-south dimension in meters>,
-        "wall_height": <float, wall height in meters>,
-        "roof_type": "<flat|gable|hip|shed|mansard|gambrel|butterfly|sawtooth|dutch_gable>",
-        "roof_pitch": <float, degrees 0-80>,
-        "orientation": <float, degrees 0-360, 0=north>
+        "width": <float>,
+        "depth": <float>,
+        "wall_height": <float>,
+        "roof_type": "<one of the types above>",
+        "roof_pitch": <float>,
+        "orientation": <float>
     },
     "building_type": "<residential|commercial|industrial|mixed>",
     "stories": <int>,
     "materials": ["<material1>", "<material2>"],
     "confidence": "<low|medium|high>",
-    "notes": "<brief description of the building>",
+    "notes": "<brief description including what scale references you used>",
     "nearby_structures": [
         {
-            "type": "<tree|fence|wall|shed|garage|other>",
+            "type": "<tree|fence|wall|shed|garage|building|other>",
             "description": "<brief description>",
-            "relative_position": "<N|NE|E|SE|S|SW|W|NW of building>",
+            "relative_position": "<N|NE|E|SE|S|SW|W|NW>",
             "estimated_height": <float, meters>
         }
     ]
-}
-
-If you cannot determine a measurement, use reasonable defaults:
-- width: 10.0, depth: 8.0, wall_height: 6.0
-- roof_type: gable, roof_pitch: 30
-Be conservative with estimates. Note your confidence level."""
+}"""
 
 
 def _detect_provider() -> str:
@@ -86,7 +112,7 @@ class VisionAnalyzer:
             if not api_key:
                 raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY not found")
             genai.configure(api_key=api_key)
-            self.client = genai.GenerativeModel("gemini-2.0-flash")
+            self.client = genai.GenerativeModel("gemini-2.0-flash-001")
 
         elif self.provider == "openai":
             import openai
@@ -151,8 +177,12 @@ class VisionAnalyzer:
 
         response = self.client.chat.completions.create(
             model="gpt-4o",
-            max_tokens=1500,
-            messages=[{"role": "user", "content": content}],
+            max_tokens=2000,
+            temperature=0.1,
+            messages=[
+                {"role": "system", "content": "You are an expert architectural surveyor. Return ONLY valid JSON, no markdown fences."},
+                {"role": "user", "content": content},
+            ],
         )
         return response.choices[0].message.content.strip()
 
@@ -206,13 +236,20 @@ class VisionAnalyzer:
         if roof_type not in valid_roofs:
             roof_type = "gable"
 
+        def _clamp(val, lo, hi, default):
+            try:
+                v = float(val)
+                return max(lo, min(hi, v))
+            except (TypeError, ValueError):
+                return default
+
         geometry = BuildingGeometry(
-            width=float(geom_data.get("width", 10.0)),
-            depth=float(geom_data.get("depth", 8.0)),
-            wall_height=float(geom_data.get("wall_height", 6.0)),
+            width=_clamp(geom_data.get("width"), 1.0, 200.0, 10.0),
+            depth=_clamp(geom_data.get("depth"), 1.0, 200.0, 8.0),
+            wall_height=_clamp(geom_data.get("wall_height"), 1.0, 100.0, 6.0),
             roof_type=roof_type,
-            roof_pitch=float(geom_data.get("roof_pitch", 30.0)),
-            orientation=float(geom_data.get("orientation", 0.0)),
+            roof_pitch=_clamp(geom_data.get("roof_pitch"), 5.0, 75.0, 30.0),
+            orientation=_clamp(geom_data.get("orientation"), 0.0, 359.0, 0.0),
         )
 
         nearby = []
