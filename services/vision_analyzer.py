@@ -266,7 +266,7 @@ class VisionAnalyzer:
         return BuildingAnalysis(
             geometry=geometry,
             building_type=data.get("building_type", "residential"),
-            stories=int(data.get("stories", 1)),
+            stories=max(1, int(data.get("stories", 1))),
             materials=data.get("materials", []),
             confidence=data.get("confidence", "medium"),
             notes=data.get("notes", ""),
