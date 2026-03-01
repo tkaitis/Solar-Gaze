@@ -49,6 +49,18 @@ class SunPath(BaseModel):
         return [p for p in self.positions if p.is_above_horizon]
 
 
+class LightPatchResult(BaseModel):
+    """Sun light patch projected onto the interior floor through a window."""
+    wall_name: str = Field(description="Which wall: south, north, east, west")
+    patch_vertices: list[tuple[float, float]] = Field(
+        description="2D polygon vertices (x, y) on the interior floor"
+    )
+    patch_area: float = Field(description="Light patch area in m²")
+    window_corners_3d: list[tuple[float, float, float]] = Field(
+        description="4 corners of the window aperture in 3D for rendering"
+    )
+
+
 class ShadowResult(BaseModel):
     shadow_vertices: list[tuple[float, float]] = Field(
         description="2D polygon vertices (x, y) on ground plane"

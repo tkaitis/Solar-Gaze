@@ -27,6 +27,11 @@ def render_sidebar():
 
         st.divider()
 
+        # --- Windows & Glass Walls ---
+        _render_window_controls()
+
+        st.divider()
+
         # --- Location ---
         _render_location_controls()
 
@@ -62,9 +67,9 @@ def _render_image_upload() -> bool:
     if aerial_file or front_file:
         cols = st.columns(2)
         if aerial_file:
-            cols[0].image(aerial_file, caption="Aerial", use_container_width=True)
+            cols[0].image(aerial_file, caption="Aerial", width="stretch")
         if front_file:
-            cols[1].image(front_file, caption="Front", use_container_width=True)
+            cols[1].image(front_file, caption="Front", width="stretch")
 
     # Show which AI provider is available
     from services.vision_analyzer import _detect_provider
@@ -358,3 +363,71 @@ def _render_datetime_controls():
             format_func=lambda x: f"{x}x",
             key="input_anim_speed",
         )
+
+
+def _render_window_controls():
+    st.subheader("Windows & Glass Walls")
+
+    glazing_options = ["none", "window", "glass_wall"]
+    glazing_labels = {"none": "Solid Wall", "window": "Window", "glass_wall": "Glass Wall"}
+
+    # All wall selectboxes always rendered — stable layout
+    for direction in ["south", "north", "east", "west"]:
+        key_glazing = f"glazing_{direction}"
+        current = st.session_state.get(key_glazing, "none")
+        if current not in glazing_options:
+            current = "none"
+
+        st.session_state[key_glazing] = st.selectbox(
+            f"{direction.title()} Wall",
+            options=glazing_options,
+            index=glazing_options.index(current),
+            format_func=lambda x, _labels=glazing_labels: _labels[x],
+            key=f"input_{key_glazing}",
+        )
+
+    # Window size sliders in a persistent expander — internal changes
+    # don't destabilize the outer sidebar layout
+    window_walls = [
+        d for d in ["south", "north", "east", "west"]
+        if st.session_state.get(f"glazing_{d}") == "window"
+    ]
+    with st.expander("Window size settings", expanded=bool(window_walls)):
+        if not window_walls:
+            st.caption("Select 'Window' on a wall above to adjust size.")
+        for direction in window_walls:
+            st.markdown(f"**{direction.title()}**")
+            st.session_state[f"win_width_{direction}"] = st.slider(
+                "Width %",
+                min_value=10, max_value=100,
+                value=st.session_state.get(f"win_width_{direction}", 50),
+                step=5,
+                key=f"input_win_width_{direction}",
+            )
+            st.session_state[f"win_height_{direction}"] = st.slider(
+                "Height %",
+                min_value=10, max_value=100,
+                value=st.session_state.get(f"win_height_{direction}", 50),
+                step=5,
+                key=f"input_win_height_{direction}",
+            )
+            st.session_state[f"win_sill_{direction}"] = st.slider(
+                "Sill height %",
+                min_value=0, max_value=90,
+                value=st.session_state.get(f"win_sill_{direction}", 15),
+                step=5,
+                key=f"input_win_sill_{direction}",
+            )
+
+    # Transparency toggle — always rendered, disabled when no glazing
+    has_glazing = any(
+        st.session_state.get(f"glazing_{d}", "none") != "none"
+        for d in ["south", "north", "east", "west"]
+    )
+    st.session_state["transparent_building"] = st.checkbox(
+        "See-through walls",
+        value=st.session_state.get("transparent_building", False),
+        key="input_transparent",
+        disabled=not has_glazing,
+        help="Make building walls semi-transparent to see interior light patches",
+    )

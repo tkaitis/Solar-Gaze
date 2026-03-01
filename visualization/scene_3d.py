@@ -3,8 +3,8 @@ from __future__ import annotations
 import numpy as np
 import plotly.graph_objects as go
 
-from models.building import BuildingGeometry, NearbyStructure
-from models.solar import ShadowResult, SolarPosition, SunPath
+from models.building import BuildingGeometry, NearbyStructure, WindowConfig
+from models.solar import LightPatchResult, ShadowResult, SolarPosition, SunPath
 from services.geometry_builder import GeometryBuilder
 from services.solar_engine import SolarEngine
 from visualization.color_themes import COLORS
@@ -23,13 +23,19 @@ class Scene3D:
         sun_path: SunPath | None,
         shadow: ShadowResult | None,
         nearby: list[NearbyStructure] | None = None,
+        window_config: WindowConfig | None = None,
+        light_patches: list[LightPatchResult] | None = None,
+        transparent_building: bool = False,
     ) -> go.Figure:
         self.fig = go.Figure()
         self._compute_sizes(geometry)
 
         self._add_ground_plane(geometry)
         self._add_compass_rose(geometry)
-        self._add_building(geometry)
+        self._add_building(geometry, transparent=transparent_building)
+
+        if window_config and window_config.has_any_glazing():
+            self._add_windows(window_config, geometry)
 
         if nearby:
             self._add_nearby_structures(nearby, geometry)
@@ -43,6 +49,9 @@ class Scene3D:
         if shadow:
             self._add_shadow(shadow)
 
+        if light_patches:
+            self._add_light_patches(light_patches)
+
         self._configure_layout(geometry)
         return self.fig
 
@@ -53,6 +62,9 @@ class Scene3D:
         anim_positions: list[SolarPosition],
         anim_shadows: list[ShadowResult | None],
         nearby: list[NearbyStructure] | None = None,
+        window_config: WindowConfig | None = None,
+        anim_light_patches: list[list[LightPatchResult]] | None = None,
+        transparent_building: bool = False,
     ) -> go.Figure:
         """Build a scene with Plotly animation frames for smooth client-side playback."""
         self.fig = go.Figure()
@@ -61,7 +73,10 @@ class Scene3D:
         # Static traces
         self._add_ground_plane(geometry)
         self._add_compass_rose(geometry)
-        self._add_building(geometry)
+        self._add_building(geometry, transparent=transparent_building)
+
+        if window_config and window_config.has_any_glazing():
+            self._add_windows(window_config, geometry)
 
         if nearby:
             self._add_nearby_structures(nearby, geometry)
@@ -107,6 +122,11 @@ class Scene3D:
         shadow_trace = self._build_shadow_trace(first_shadow)
         self.fig.add_trace(shadow_trace)
 
+        # Dynamic trace 3: Light patch (index n_static + 3)
+        first_lp = anim_light_patches[0] if anim_light_patches else []
+        lp_trace = self._build_light_patch_trace(first_lp)
+        self.fig.add_trace(lp_trace)
+
         # Build animation frames
         frames = []
         slider_steps = []
@@ -114,6 +134,8 @@ class Scene3D:
         for i, (pos, shadow) in enumerate(zip(anim_positions, anim_shadows)):
             sx, sy, sz = SolarEngine.sun_sphere_coords(pos, self.sun_radius)
             label = pos.timestamp.strftime("%H:%M")
+
+            lp_list = anim_light_patches[i] if anim_light_patches and i < len(anim_light_patches) else []
 
             frame_data = [
                 go.Scatter3d(
@@ -132,11 +154,12 @@ class Scene3D:
                     hoverinfo="skip",
                 ),
                 self._build_shadow_trace(shadow),
+                self._build_light_patch_trace(lp_list),
             ]
 
             frames.append(go.Frame(
                 data=frame_data,
-                traces=[n_static, n_static + 1, n_static + 2],
+                traces=[n_static, n_static + 1, n_static + 2, n_static + 3],
                 name=label,
             ))
 
@@ -366,11 +389,13 @@ class Scene3D:
                 )
             )
 
-    def _add_building(self, geometry: BuildingGeometry):
+    def _add_building(self, geometry: BuildingGeometry, transparent: bool = False):
         xs, ys, zs, faces, _, _ = GeometryBuilder.build_mesh(geometry)
         i_faces = [f[0] for f in faces]
         j_faces = [f[1] for f in faces]
         k_faces = [f[2] for f in faces]
+
+        opacity = 0.15 if transparent else 0.85
 
         self.fig.add_trace(
             go.Mesh3d(
@@ -381,7 +406,7 @@ class Scene3D:
                 j=j_faces,
                 k=k_faces,
                 color=COLORS["building"],
-                opacity=0.85,
+                opacity=opacity,
                 name="Building",
                 flatshading=True,
                 hoverinfo="name",
@@ -416,6 +441,128 @@ class Scene3D:
 
         # Front-face indicator
         self._add_front_indicator(geometry)
+
+    def _add_windows(self, window_config: WindowConfig, geometry: BuildingGeometry):
+        """Render glass panes on walls that have glazing."""
+        from services.light_calculator import _window_corners_3d, _rotate_point_3d
+
+        w = geometry.width
+        d = geometry.depth
+        h = geometry.wall_height
+        cx, cy = w / 2, d / 2
+        orient_rad = np.radians(geometry.orientation)
+
+        wall_defs = [
+            ("south", window_config.south, (0, 0, 0), (1, 0, 0), (0, 0, 1), w, h),
+            ("north", window_config.north, (w, d, 0), (-1, 0, 0), (0, 0, 1), w, h),
+            ("east", window_config.east, (w, 0, 0), (0, 1, 0), (0, 0, 1), d, h),
+            ("west", window_config.west, (0, d, 0), (0, -1, 0), (0, 0, 1), d, h),
+        ]
+
+        for name, glazing, origin, u_vec, v_vec, wall_w, wall_h in wall_defs:
+            if glazing.glazing_type == "none":
+                continue
+
+            corners = _window_corners_3d(glazing, origin, u_vec, v_vec, wall_w, wall_h)
+            rotated = [_rotate_point_3d(p, cx, cy, orient_rad) for p in corners]
+
+            gx = [c[0] for c in rotated]
+            gy = [c[1] for c in rotated]
+            gz = [c[2] for c in rotated]
+
+            # Glass pane
+            self.fig.add_trace(
+                go.Mesh3d(
+                    x=gx, y=gy, z=gz,
+                    i=[0, 0], j=[1, 2], k=[2, 3],
+                    color=COLORS["window_glass"],
+                    opacity=0.4,
+                    name=f"{name.title()} Window",
+                    showlegend=False,
+                    hoverinfo="name",
+                )
+            )
+
+            # Frame border
+            fx = gx + [gx[0]]
+            fy = gy + [gy[0]]
+            fz = gz + [gz[0]]
+            self.fig.add_trace(
+                go.Scatter3d(
+                    x=fx, y=fy, z=fz,
+                    mode="lines",
+                    line=dict(color=COLORS["window_frame"], width=3),
+                    showlegend=False,
+                    hoverinfo="skip",
+                )
+            )
+
+    def _add_light_patches(self, light_patches: list[LightPatchResult]):
+        """Render warm yellow light patches on the interior floor."""
+        trace = self._build_light_patch_trace(light_patches)
+        if trace:
+            self.fig.add_trace(trace)
+
+    @staticmethod
+    def _build_light_patch_trace(patches: list[LightPatchResult]) -> go.Mesh3d:
+        """Build a single Mesh3d trace for all light patches combined."""
+        all_x: list[float] = []
+        all_y: list[float] = []
+        all_z: list[float] = []
+        all_i: list[int] = []
+        all_j: list[int] = []
+        all_k: list[int] = []
+
+        for patch in (patches or []):
+            verts = patch.patch_vertices
+            if len(verts) < 3:
+                continue
+
+            base = len(all_x)
+            # Add all vertices
+            for vx, vy in verts:
+                all_x.append(vx)
+                all_y.append(vy)
+                all_z.append(0.02)
+
+            # Add centroid
+            cx = sum(v[0] for v in verts) / len(verts)
+            cy = sum(v[1] for v in verts) / len(verts)
+            all_x.append(cx)
+            all_y.append(cy)
+            all_z.append(0.02)
+            center_idx = len(all_x) - 1
+
+            # Fan triangulation from centroid
+            angles = [np.arctan2(v[1] - cy, v[0] - cx) for v in verts]
+            sorted_indices = sorted(range(len(verts)), key=lambda idx: angles[idx])
+            n = len(sorted_indices)
+            for idx in range(n):
+                all_i.append(center_idx)
+                all_j.append(base + sorted_indices[idx])
+                all_k.append(base + sorted_indices[(idx + 1) % n])
+
+        if not all_i:
+            # Invisible placeholder
+            return go.Mesh3d(
+                x=[0, 0, 0], y=[0, 0, 0], z=[0, 0, 0],
+                i=[0], j=[1], k=[2],
+                color=COLORS["light_patch"],
+                opacity=0.0,
+                name="Interior Light",
+                hoverinfo="skip",
+                showlegend=False,
+            )
+
+        return go.Mesh3d(
+            x=all_x, y=all_y, z=all_z,
+            i=all_i, j=all_j, k=all_k,
+            color=COLORS["light_patch"],
+            opacity=0.6,
+            name="Interior Light",
+            hoverinfo="name",
+            showlegend=False,
+        )
 
     def _add_front_indicator(self, geometry: BuildingGeometry):
         """Draw a colored bar and label on the building's front face to show orientation."""

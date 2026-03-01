@@ -10,6 +10,29 @@ RoofType = Literal[
     "gambrel", "butterfly", "sawtooth", "dutch_gable",
 ]
 Confidence = Literal["low", "medium", "high"]
+GlazingType = Literal["none", "window", "glass_wall"]
+
+
+class WallGlazing(BaseModel):
+    """Glazing configuration for a single wall."""
+    glazing_type: GlazingType = "none"
+    window_width_frac: float = Field(0.5, ge=0.1, le=1.0, description="Window width as fraction of wall width")
+    window_height_frac: float = Field(0.5, ge=0.1, le=1.0, description="Window height as fraction of wall height")
+    sill_height_frac: float = Field(0.15, ge=0.0, le=0.9, description="Sill height as fraction of wall height")
+
+
+class WindowConfig(BaseModel):
+    """Glazing configuration for all four walls."""
+    south: WallGlazing = Field(default_factory=WallGlazing)
+    north: WallGlazing = Field(default_factory=WallGlazing)
+    east: WallGlazing = Field(default_factory=WallGlazing)
+    west: WallGlazing = Field(default_factory=WallGlazing)
+
+    def has_any_glazing(self) -> bool:
+        return any(
+            w.glazing_type != "none"
+            for w in [self.south, self.north, self.east, self.west]
+        )
 
 
 class NearbyStructure(BaseModel):

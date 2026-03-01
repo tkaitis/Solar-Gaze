@@ -15,4 +15,7 @@ COLORS = {
     "structure": "rgb(160, 140, 120)",
     "background": "rgb(240, 245, 250)",
     "text": "rgb(60, 60, 80)",
+    "window_glass": "rgba(100, 180, 255, 0.35)",
+    "window_frame": "rgb(40, 60, 80)",
+    "light_patch": "rgba(255, 220, 80, 0.55)",
 }

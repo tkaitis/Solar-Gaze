@@ -33,11 +33,12 @@ st.markdown("""
 
 from models.solar import LocationConfig
 from services.geometry_builder import GeometryBuilder
+from services.light_calculator import LightCalculator
 from services.shadow_calculator import ShadowCalculator
 from services.solar_engine import SolarEngine
 from visualization.scene_3d import Scene3D
 from ui.analysis_panel import render_analysis_panel
-from ui.session_state import init_session_state, get_building_geometry, get_selected_datetime
+from ui.session_state import init_session_state, get_building_geometry, get_selected_datetime, get_window_config
 from ui.sidebar_controls import render_sidebar
 
 LOGO_PATH = os.path.join(os.path.dirname(__file__), "assets", "cigdem_flower2.jpeg")
@@ -146,6 +147,16 @@ def main():
             geometry, sun_position, roof_verts, footprint
         )
 
+    # Get window config and compute light patches
+    window_config = get_window_config()
+    light_patches = []
+    if window_config.has_any_glazing() and sun_position.is_above_horizon:
+        light_patches = LightCalculator.compute_light_patches(
+            geometry, sun_position, window_config
+        )
+
+    transparent_building = st.session_state.get("transparent_building", False)
+
     # Get nearby structures from AI analysis
     nearby = None
     if st.session_state.get("ai_analysis"):
@@ -174,7 +185,7 @@ def main():
             st.session_state.pop("ai_error", None)
             st.rerun()
 
-    plotly_config = {"scrollZoom": False}
+    plotly_config = {"scrollZoom": True}
 
     # Full-width 3D scene
     if st.session_state.animate:
@@ -190,27 +201,41 @@ def main():
             anim_positions = usable[::step]
 
             anim_shadows = []
+            anim_light_patches = []
             for pos in anim_positions:
                 _, _, _, _, fp, rv = GeometryBuilder.build_mesh(geometry)
                 s = ShadowCalculator.compute_shadow(geometry, pos, rv, fp)
                 anim_shadows.append(s)
+                if window_config.has_any_glazing():
+                    lp = LightCalculator.compute_light_patches(geometry, pos, window_config)
+                    anim_light_patches.append(lp)
+                else:
+                    anim_light_patches.append([])
 
             scene = Scene3D()
             fig = scene.build_animated_scene(
-                geometry, sun_path, anim_positions, anim_shadows, nearby
+                geometry, sun_path, anim_positions, anim_shadows, nearby,
+                window_config=window_config,
+                anim_light_patches=anim_light_patches,
+                transparent_building=transparent_building,
             )
             st.plotly_chart(
                 fig, use_container_width=True, key="anim_scene", config=plotly_config
             )
     else:
         scene = Scene3D()
-        fig = scene.build_scene(geometry, sun_position, sun_path, shadow, nearby)
+        fig = scene.build_scene(
+            geometry, sun_position, sun_path, shadow, nearby,
+            window_config=window_config,
+            light_patches=light_patches,
+            transparent_building=transparent_building,
+        )
         st.plotly_chart(
             fig, use_container_width=True, key="main_3d_scene", config=plotly_config
         )
 
     # Analysis panel below the rendering
-    render_analysis_panel(sun_position, sun_path, shadow, geometry)
+    render_analysis_panel(sun_position, sun_path, shadow, geometry, light_patches)
 
 
 def _show_how_to_use():
@@ -235,19 +260,25 @@ def _show_how_to_use():
               "Set <b>width, depth, wall height</b> in meters or feet. Pick a <b>roof type</b> "
               "(flat, gable, hip, mansard, gambrel, butterfly, sawtooth, dutch gable) "
               "and adjust pitch and orientation."),
-        _card("3", "Pick Date and Time", "#0ea5e9",
+        _card("3", "Windows & Glass Walls", "#10b981",
+              "Set each wall to <b>Solid Wall</b>, <b>Window</b>, or <b>Glass Wall</b>. "
+              "For windows, adjust <b>width %</b>, <b>height %</b>, and <b>sill height %</b>. "
+              "Enable <b>See-through walls</b> to view interior light patches on the floor."),
+        _card("4", "Pick Date and Time", "#0ea5e9",
               "Select a <b>date</b> and adjust the <b>hour/minute</b> sliders. The 3D scene "
               "updates in real time with sun position, path arc, and shadow projection."),
-        _card("4", "Animate", "#f59e0b",
-              "Tick <b>Animate through day</b> to watch the sun and shadow move. "
-              "Use the green <b>Play</b> / amber <b>Pause</b> buttons and the timeline slider."),
-        _card("5", "AI Vision (Optional)", "#6366f1",
+        _card("5", "Animate", "#f59e0b",
+              "Tick <b>Animate through day</b> to watch the sun, shadow, and interior light "
+              "move throughout the day. Use <b>Play</b> / <b>Pause</b> and the timeline slider."),
+        _card("6", "AI Vision (Optional)", "#6366f1",
               "Upload an <b>aerial screenshot</b> and/or <b>front photo</b>. "
               "Click <b>Analyze with AI</b> to auto-detect dimensions, roof type, "
-              "materials, and nearby structures. Requires an OpenAI or Gemini API key in .env."),
+              "materials, and nearby structures. Requires an API key in .env."),
         _card("", "Tips", "#6366f1",
-              "<b>Turntable drag</b> to rotate the 3D view. The red <b>FRONT</b> marker "
-              "shows building orientation. The <b>orange arc</b> is the sun path with hourly markers."),
+              "<b>Drag</b> to rotate the 3D view, <b>scroll</b> to zoom in/out. "
+              "The red <b>FRONT</b> marker shows building orientation. "
+              "The <b>orange arc</b> is the sun path. "
+              "<b>Yellow patches</b> on the floor show sunlight entering through windows."),
     ]
 
     html = (

@@ -3,7 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from models.building import BuildingGeometry
-from models.solar import ShadowResult, SolarPosition, SunPath
+from models.solar import LightPatchResult, ShadowResult, SolarPosition, SunPath
 
 BEARING_DIRS = [
     "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
@@ -16,6 +16,7 @@ def render_analysis_panel(
     sun_path: SunPath | None,
     shadow: ShadowResult | None,
     geometry: BuildingGeometry,
+    light_patches: list[LightPatchResult] | None = None,
 ):
     """Render a professional dashboard panel below the 3D scene."""
 
@@ -63,11 +64,28 @@ def render_analysis_panel(
         building_items.append(("Height", f"{geometry.wall_height:.1f} m"))
     building_items.append(("Orientation", f"{geometry.orientation:.0f}&deg; from N"))
 
-    html = _build_dashboard(
+    # --- Interior light data ---
+    light_items = []
+    if light_patches:
+        total_area = sum(p.patch_area for p in light_patches)
+        light_items.append(("Total Lit Area", f"{total_area:.1f} m&sup2;"))
+        for patch in light_patches:
+            light_items.append((
+                f"{patch.wall_name.title()} Wall",
+                f"{patch.patch_area:.1f} m&sup2;",
+            ))
+    else:
+        light_items.append(("Status", "No interior light"))
+
+    cards = [
         ("Solar Position", "#f59e0b", solar_items),
         ("Shadow Analysis", "#6366f1", shadow_items),
         ("Building", "#0ea5e9", building_items),
-    )
+    ]
+    if light_patches:
+        cards.append(("Interior Light", "#eab308", light_items))
+
+    html = _build_dashboard(*cards)
     st.markdown(html, unsafe_allow_html=True)
 
 

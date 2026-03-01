@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 import streamlit as st
 
-from models.building import BuildingAnalysis, BuildingGeometry
+from models.building import BuildingAnalysis, BuildingGeometry, WallGlazing, WindowConfig
 
 
 LOCATION_PRESETS = {
@@ -148,6 +148,24 @@ def init_session_state():
         "animate": False,
         "animation_speed": 1.0,
         "animation_hour": 6.0,
+        # Windows & glazing
+        "glazing_south": "none",
+        "glazing_north": "none",
+        "glazing_east": "none",
+        "glazing_west": "none",
+        "win_width_south": 50,
+        "win_height_south": 50,
+        "win_sill_south": 15,
+        "win_width_north": 50,
+        "win_height_north": 50,
+        "win_sill_north": 15,
+        "win_width_east": 50,
+        "win_height_east": 50,
+        "win_sill_east": 15,
+        "win_width_west": 50,
+        "win_height_west": 50,
+        "win_sill_west": 15,
+        "transparent_building": False,
         # UI
         "show_help": False,
     }
@@ -165,6 +183,23 @@ def get_building_geometry() -> BuildingGeometry:
         roof_type=st.session_state.building_roof_type,
         roof_pitch=st.session_state.building_roof_pitch,
         orientation=st.session_state.building_orientation,
+    )
+
+
+def get_window_config() -> WindowConfig:
+    """Build a WindowConfig from current session state."""
+    def _wall(direction: str) -> WallGlazing:
+        return WallGlazing(
+            glazing_type=st.session_state.get(f"glazing_{direction}", "none"),
+            window_width_frac=st.session_state.get(f"win_width_{direction}", 50) / 100,
+            window_height_frac=st.session_state.get(f"win_height_{direction}", 50) / 100,
+            sill_height_frac=st.session_state.get(f"win_sill_{direction}", 15) / 100,
+        )
+    return WindowConfig(
+        south=_wall("south"),
+        north=_wall("north"),
+        east=_wall("east"),
+        west=_wall("west"),
     )
 
 
