@@ -796,5 +796,5 @@ class Scene3D:
                 bgcolor="rgba(255,255,255,0.8)",
                 font=dict(size=10),
             ),
-            height=650,
+            height=500,
         )

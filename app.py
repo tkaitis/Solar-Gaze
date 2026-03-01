@@ -10,7 +10,7 @@ st.set_page_config(
     page_title="Theo's Solar Gazer",
     page_icon="☀️",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # Institutional CSS
@@ -27,7 +27,7 @@ st.markdown("""
     /* Smaller metric overrides (fallback for non-table areas) */
     [data-testid="stMetric"] { padding: 4px 0; }
     [data-testid="stMetricValue"] { font-size: 0.95rem; }
-    [data-testid="stMetricLabel"] { font-size: 0.7rem; }
+    [data-testid="stMetricLabel"] { font-size: 0.85rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -67,16 +67,16 @@ def _render_hero_banner():
             'background:linear-gradient(135deg, rgba(0,0,0,0.0) 0%, '
             'rgba(0,0,0,0.0) 40%, rgba(0,0,0,0.45) 100%);">'
             '</div>'
-            # Title + subtitle overlay — top-right
+            # Title + subtitle overlay — responsive positioning
             '<div style="'
-            'position:absolute; top:50px; right:18px; '
+            'position:absolute; top:30%; right:4%; '
             "font-family:'Inter','Segoe UI',system-ui,sans-serif; "
             'text-align:right;">'
-            '<div style="font-size:22px; font-weight:700; color:#fff; '
+            '<div style="font-size:clamp(14px, 3vw, 22px); font-weight:700; color:#fff; '
             'letter-spacing:0.3px; text-shadow:0 1px 6px rgba(0,0,0,0.7);">'
             "Theo's Solar Gazer"
             '</div>'
-            '<div style="font-size:12px; color:rgba(255,255,255,0.9); '
+            '<div style="font-size:clamp(10px, 1.8vw, 13px); color:rgba(255,255,255,0.9); '
             'font-weight:500; letter-spacing:0.4px; margin-top:2px; '
             'text-shadow:0 1px 4px rgba(0,0,0,0.6);">'
             'Solar Path &amp; Shadow Analysis'
@@ -150,7 +150,7 @@ def main():
     _render_hero_banner()
 
     # Help button (right-aligned, professional)
-    help_cols = st.columns([10, 2])
+    help_cols = st.columns([3, 1])
     with help_cols[1]:
         help_label = "Hide Guide" if st.session_state.get("show_help") else "How to Use"
         if st.button(help_label, key="how_to_use_btn", type="secondary", use_container_width=True):
@@ -169,7 +169,11 @@ def main():
             st.session_state.pop("ai_error", None)
             st.rerun()
 
-    plotly_config = {"scrollZoom": True}
+    # Enable scroll-zoom on desktop only; on touch devices it traps the page scroll
+    plotly_config = {
+        "scrollZoom": True,
+        "modeBarButtonsToRemove": ["zoom3d", "pan3d", "resetCameraLastSave3d"],
+    }
 
     # Full-width 3D scene
     if st.session_state.animate:
@@ -218,6 +222,18 @@ def main():
             fig, use_container_width=True, key="main_3d_scene", config=plotly_config
         )
 
+    # Disable scroll-zoom on touch devices to prevent trapping page scroll
+    st.components.v1.html("""
+    <script>
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        document.querySelectorAll('.js-plotly-plot').forEach(function(el) {
+            if (el._fullLayout) el._fullLayout.scene._scene.glplot.scrollZoom = false;
+            el.style.touchAction = 'pan-y';
+        });
+    }
+    </script>
+    """, height=0)
+
     # Analysis panel below the rendering
     render_analysis_panel(sun_position, sun_path, shadow, geometry, light_patches)
 
@@ -227,12 +243,12 @@ def _show_how_to_use():
 
     def _card(number, title, color, body):
         return (
-            '<div style="flex:1; min-width:220px; background:#f8fafc; '
+            '<div style="flex:1; min-width:160px; background:#f8fafc; '
             'border-radius:8px; padding:12px 14px; border:1px solid #e2e8f0;">'
-            f'<div style="font-size:11px; font-weight:700; color:{color}; '
+            f'<div style="font-size:13px; font-weight:700; color:{color}; '
             'text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px;">'
             f'{number}. {title}</div>'
-            f'<div style="font-size:12px; color:#475569; line-height:1.6;">{body}</div>'
+            f'<div style="font-size:13px; color:#475569; line-height:1.6;">{body}</div>'
             '</div>'
         )
 
@@ -308,7 +324,7 @@ def _show_ai_results_banner():
     notes_html = ""
     if analysis.notes:
         notes_html = (
-            '<div style="font-size:11px; color:#64748b; margin-top:4px; '
+            '<div style="font-size:12px; color:#64748b; margin-top:4px; '
             f'font-style:italic;">{analysis.notes}</div>'
         )
 
@@ -319,11 +335,11 @@ def _show_ai_results_banner():
         'border-radius:8px; padding:10px 16px; margin-bottom:8px;'
         "font-family:'Inter','Segoe UI',system-ui,sans-serif;"
         '">'
-        '<div style="font-size:11px; font-weight:700; color:#0369a1;'
+        '<div style="font-size:13px; font-weight:700; color:#0369a1;'
         'text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">'
         f'AI Vision Analysis &mdash; {analysis.confidence.upper()} Confidence'
         '</div>'
-        f'<div style="font-size:12px; color:#334155; line-height:1.6;">{pills_html}</div>'
+        f'<div style="font-size:13px; color:#334155; line-height:1.6;">{pills_html}</div>'
         f'{notes_html}'
         '</div>'
     )

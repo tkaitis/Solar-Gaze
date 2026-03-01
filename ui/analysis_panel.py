@@ -108,7 +108,7 @@ def _build_dashboard(*cards: tuple[str, str, list[tuple[str, str]]]) -> str:
 
         card_html_list.append(
             f'<div style="'
-            f"flex:1; min-width:200px; "
+            f"flex:1; min-width:140px; "
             f"background:linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); "
             f"border:1px solid #e2e8f0; "
             f"border-radius:10px; "
@@ -121,7 +121,7 @@ def _build_dashboard(*cards: tuple[str, str, list[tuple[str, str]]]) -> str:
             f"padding:8px 14px; "
             f'">'
             f'<span style="'
-            f"color:#fff; font-size:11px; font-weight:700; "
+            f"color:#fff; font-size:13px; font-weight:700; "
             f"text-transform:uppercase; letter-spacing:0.8px; "
             f"font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif; "
             f'">{title}</span>'
