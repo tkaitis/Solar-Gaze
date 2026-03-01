@@ -53,17 +53,6 @@ def _render_hero_banner():
         with open(HERO_PATH, "rb") as f:
             hero_b64 = base64.b64encode(f.read()).decode()
 
-        logo_html = ""
-        if os.path.exists(LOGO_PATH):
-            with open(LOGO_PATH, "rb") as f:
-                logo_b64 = base64.b64encode(f.read()).decode()
-            logo_html = (
-                f'<img src="data:image/jpeg;base64,{logo_b64}" '
-                'style="width:44px; height:44px; border-radius:8px; '
-                'object-fit:cover; margin-right:12px; '
-                'border:2px solid rgba(255,255,255,0.6);" />'
-            )
-
         banner_html = (
             '<div style="'
             'position:relative; width:100%; '
@@ -83,8 +72,6 @@ def _render_hero_banner():
             'position:absolute; top:50px; right:18px; '
             "font-family:'Inter','Segoe UI',system-ui,sans-serif; "
             'text-align:right;">'
-            '<div style="display:flex; align-items:center; justify-content:flex-end;">'
-            '<div style="margin-right:12px;">'
             '<div style="font-size:22px; font-weight:700; color:#fff; '
             'letter-spacing:0.3px; text-shadow:0 1px 6px rgba(0,0,0,0.7);">'
             "Theo's Solar Gazer"
@@ -93,9 +80,6 @@ def _render_hero_banner():
             'font-weight:500; letter-spacing:0.4px; margin-top:2px; '
             'text-shadow:0 1px 4px rgba(0,0,0,0.6);">'
             'Solar Path &amp; Shadow Analysis'
-            '</div>'
-            '</div>'
-            f'{logo_html}'
             '</div>'
             '</div>'
             '</div>'
