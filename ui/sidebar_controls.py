@@ -3,7 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from models.building import BuildingGeometry
-from ui.session_state import LOCATION_PRESETS
+from ui.session_state import LOCATION_PRESETS, LOCATION_REGIONS
 
 METERS_PER_FOOT = 0.3048
 FEET_PER_METER = 3.28084
@@ -65,11 +65,10 @@ def _render_image_upload() -> bool:
     )
 
     if aerial_file or front_file:
-        cols = st.columns(2)
         if aerial_file:
-            cols[0].image(aerial_file, caption="Aerial", width="stretch")
+            st.image(aerial_file, caption="Aerial", width=200)
         if front_file:
-            cols[1].image(front_file, caption="Front", width="stretch")
+            st.image(front_file, caption="Front", width=200)
 
     # Show which AI provider is available
     from services.vision_analyzer import _detect_provider
@@ -216,21 +215,21 @@ def _render_building_controls():
     )
 
     if st.session_state.building_roof_type != "flat":
-        st.session_state.building_roof_pitch = st.slider(
+        st.session_state.building_roof_pitch = st.number_input(
             "Roof Pitch (degrees)",
             min_value=5.0,
             max_value=75.0,
             value=st.session_state.building_roof_pitch,
-            step=1.0,
+            step=5.0,
             key="input_roof_pitch",
         )
 
-    st.session_state.building_orientation = st.slider(
+    st.session_state.building_orientation = st.number_input(
         "Building Orientation (degrees from N)",
         min_value=0.0,
         max_value=359.0,
         value=st.session_state.building_orientation,
-        step=1.0,
+        step=5.0,
         key="input_orientation",
     )
 
@@ -238,27 +237,42 @@ def _render_building_controls():
 def _render_location_controls():
     st.subheader("Location")
 
-    preset_names = ["Custom"] + sorted(LOCATION_PRESETS.keys())
-    current_preset = st.session_state.get("location_name", "Custom")
-    if current_preset not in preset_names:
-        current_preset = "Custom"
+    # Two-step picker: Region → City (much friendlier on mobile)
+    region_names = ["Custom"] + list(LOCATION_REGIONS.keys())
+    current_region = st.session_state.get("location_region", "Custom")
+    if current_region not in region_names:
+        current_region = "Custom"
 
-    selected_preset = st.selectbox(
-        "Location Presets",
-        preset_names,
-        index=preset_names.index(current_preset),
-        key="location_preset_select",
+    selected_region = st.selectbox(
+        "Region",
+        region_names,
+        index=region_names.index(current_region),
+        key="region_select",
     )
 
-    if selected_preset != "Custom" and selected_preset != st.session_state.get(
-        "location_name"
-    ):
-        preset = LOCATION_PRESETS[selected_preset]
-        st.session_state.latitude = preset["lat"]
-        st.session_state.longitude = preset["lon"]
-        st.session_state.timezone = preset["tz"]
-        st.session_state.location_name = selected_preset
-        st.rerun()
+    if selected_region != "Custom":
+        cities = LOCATION_REGIONS[selected_region]
+        city_names = sorted(cities.keys())
+        current_city = st.session_state.get("location_name", "")
+        city_idx = city_names.index(current_city) if current_city in city_names else 0
+
+        selected_city = st.selectbox(
+            "City",
+            city_names,
+            index=city_idx,
+            key="city_select",
+        )
+
+        if selected_city != st.session_state.get("location_name") or selected_region != st.session_state.get("location_region"):
+            preset = cities[selected_city]
+            st.session_state.latitude = preset["lat"]
+            st.session_state.longitude = preset["lon"]
+            st.session_state.timezone = preset["tz"]
+            st.session_state.location_name = selected_city
+            st.session_state.location_region = selected_region
+            st.rerun()
+    else:
+        st.session_state.location_region = "Custom"
 
     st.session_state.latitude = st.number_input(
         "Latitude",
@@ -386,8 +400,7 @@ def _render_window_controls():
             key=f"input_{key_glazing}",
         )
 
-    # Window size sliders in a persistent expander — internal changes
-    # don't destabilize the outer sidebar layout
+    # Window size controls — compact number inputs instead of sliders
     window_walls = [
         d for d in ["south", "north", "east", "west"]
         if st.session_state.get(f"glazing_{d}") == "window"
@@ -396,28 +409,26 @@ def _render_window_controls():
         if not window_walls:
             st.caption("Select 'Window' on a wall above to adjust size.")
         for direction in window_walls:
-            st.markdown(f"**{direction.title()}**")
-            st.session_state[f"win_width_{direction}"] = st.slider(
-                "Width %",
-                min_value=10, max_value=100,
-                value=st.session_state.get(f"win_width_{direction}", 50),
-                step=5,
-                key=f"input_win_width_{direction}",
-            )
-            st.session_state[f"win_height_{direction}"] = st.slider(
-                "Height %",
-                min_value=10, max_value=100,
-                value=st.session_state.get(f"win_height_{direction}", 50),
-                step=5,
-                key=f"input_win_height_{direction}",
-            )
-            st.session_state[f"win_sill_{direction}"] = st.slider(
-                "Sill height %",
-                min_value=0, max_value=90,
-                value=st.session_state.get(f"win_sill_{direction}", 15),
-                step=5,
-                key=f"input_win_sill_{direction}",
-            )
+            st.caption(f"{direction.title()} Window")
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.session_state[f"win_width_{direction}"] = st.number_input(
+                    "W %", min_value=10, max_value=100,
+                    value=st.session_state.get(f"win_width_{direction}", 50),
+                    step=10, key=f"input_win_width_{direction}",
+                )
+            with c2:
+                st.session_state[f"win_height_{direction}"] = st.number_input(
+                    "H %", min_value=10, max_value=100,
+                    value=st.session_state.get(f"win_height_{direction}", 50),
+                    step=10, key=f"input_win_height_{direction}",
+                )
+            with c3:
+                st.session_state[f"win_sill_{direction}"] = st.number_input(
+                    "Sill %", min_value=0, max_value=90,
+                    value=st.session_state.get(f"win_sill_{direction}", 15),
+                    step=5, key=f"input_win_sill_{direction}",
+                )
 
     # Transparency toggle — always rendered, disabled when no glazing
     has_glazing = any(
