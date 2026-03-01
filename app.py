@@ -18,8 +18,10 @@ st.markdown("""
 <style>
     /* Remove default top padding so banner starts at very top */
     .block-container { padding-top: 0rem; padding-bottom: 0.5rem; }
-    /* Fully hide Streamlit header — remove from flow */
-    header[data-testid="stHeader"] { display: none !important; }
+    /* Hide Streamlit header on desktop, keep visible on mobile for sidebar toggle */
+    @media (min-width: 768px) {
+        header[data-testid="stHeader"] { display: none !important; }
+    }
     /* Sidebar polish */
     [data-testid="stSidebar"] { background: #f7f9fb; }
     [data-testid="stSidebar"] h1 { font-size: 1.3rem; }
