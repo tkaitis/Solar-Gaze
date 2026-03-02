@@ -27,7 +27,7 @@ st.markdown("""
         .block-container { padding-top: 3.5rem; }
         /* "Open Settings >>" label in header next to toggle */
         header[data-testid="stHeader"]::after {
-            content: "Open Settings >>";
+            content: "Open Settings";
             position: absolute;
             left: 3.2rem;
             top: 50%;
@@ -115,16 +115,16 @@ def _render_hero_banner():
             '</div>'
             # Title + subtitle overlay — responsive positioning
             '<div style="'
-            'position:absolute; top:20%; right:4%; '
+            'position:absolute; top:14%; right:4%; '
             "font-family:'Inter','Segoe UI',system-ui,sans-serif; "
             'text-align:right;">'
-            '<div style="font-size:clamp(18px, 3.5vw, 28px); font-weight:700; color:#fff; '
-            'letter-spacing:0.3px; text-shadow:0 1px 6px rgba(0,0,0,0.7);">'
+            '<div style="font-size:clamp(22px, 4.5vw, 36px); font-weight:700; color:#fff; '
+            'letter-spacing:0.3px; text-shadow:0 2px 8px rgba(0,0,0,0.7);">'
             "Theo's Solar Gazer"
             '</div>'
-            '<div style="font-size:clamp(12px, 2.2vw, 16px); color:rgba(255,255,255,0.9); '
-            'font-weight:500; letter-spacing:0.4px; margin-top:3px; '
-            'text-shadow:0 1px 4px rgba(0,0,0,0.6);">'
+            '<div style="font-size:clamp(14px, 2.8vw, 20px); color:rgba(255,255,255,0.95); '
+            'font-weight:700; letter-spacing:0.4px; margin-top:4px; '
+            'text-shadow:0 1px 6px rgba(0,0,0,0.6);">'
             'Solar Path, Shadow &amp; Photovoltaic Analysis'
             '</div>'
             '</div>'
