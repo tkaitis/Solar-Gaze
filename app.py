@@ -1,4 +1,4 @@
-"""Solar Gaze — Enterprise Solar Path & Shadow Analysis"""
+"""Solar Gaze — Solar Path, Shadow & Photovoltaic Analysis"""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import os
 import streamlit as st
 
 st.set_page_config(
-    page_title="Theo's Solar Gazer",
+    page_title="Theo's Solar Gazer — Solar Path, Shadow & Photovoltaic Analysis",
     page_icon="☀️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -84,7 +84,7 @@ def _render_hero_banner():
             '<div style="font-size:clamp(10px, 1.8vw, 13px); color:rgba(255,255,255,0.9); '
             'font-weight:500; letter-spacing:0.4px; margin-top:2px; '
             'text-shadow:0 1px 4px rgba(0,0,0,0.6);">'
-            'Solar Path &amp; Shadow Analysis'
+            'Solar Path, Shadow &amp; Photovoltaic Analysis'
             '</div>'
             '</div>'
             '</div>'

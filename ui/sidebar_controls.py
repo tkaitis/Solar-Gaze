@@ -15,7 +15,7 @@ def render_sidebar():
 
     with st.sidebar:
         st.title("Solar Gaze")
-        st.caption("Enterprise Solar Path & Shadow Analysis")
+        st.caption("Solar Path, Shadow & Photovoltaic Analysis")
 
         # --- Mode toggle ---
         mode_options = ["Sunlight & Shadow", "Solar Panel Feasibility"]
