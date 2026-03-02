@@ -41,6 +41,21 @@ st.markdown("""
         [data-testid="manage-app-button"] {
             display: none !important;
         }
+        /* Add "Open Settings" label next to sidebar toggle arrow on mobile */
+        [data-testid="stSidebarCollapsedControl"] {
+            display: flex !important;
+            align-items: center;
+        }
+        [data-testid="stSidebarCollapsedControl"]::after {
+            content: "Open Settings";
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            margin-left: 4px;
+            font-family: 'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+        }
     }
     /* Hide bottom Streamlit footer and badges on all viewports */
     footer { display: none !important; }
