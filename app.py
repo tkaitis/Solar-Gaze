@@ -25,6 +25,24 @@ st.markdown("""
     /* On mobile, keep header visible but add padding so banner isn't hidden behind it */
     @media (max-width: 767px) {
         .block-container { padding-top: 3.5rem; }
+        /* "Open Settings >>" label in header next to toggle */
+        header[data-testid="stHeader"]::after {
+            content: "Open Settings \00BB";
+            position: absolute;
+            left: 3.2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
+            font-family: 'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+            pointer-events: none;
+        }
+        /* Hide label when sidebar is open */
+        [data-testid="stSidebar"][aria-expanded="true"] ~ section header[data-testid="stHeader"]::after,
+        .st-emotion-cache-1cypcdb header[data-testid="stHeader"]::after {
+            display: none;
+        }
     }
     /* Sidebar polish */
     [data-testid="stSidebar"] { background: #f7f9fb; }
@@ -55,32 +73,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
-# Inject "Open Settings >>" label next to sidebar toggle on mobile
-st.components.v1.html("""
-<script>
-if (window.innerWidth < 768) {
-    function addLabel() {
-        var ctrl = window.parent.document.querySelector('[data-testid="stSidebarCollapsedControl"]');
-        if (ctrl && !ctrl.querySelector('.settings-label')) {
-            var lbl = document.createElement('span');
-            lbl.className = 'settings-label';
-            lbl.textContent = 'Open Settings >>';
-            lbl.style.cssText = "font-size:13px; font-weight:600; color:#475569; margin-left:4px; font-family:'Inter','Segoe UI',system-ui,sans-serif; white-space:nowrap; cursor:pointer;";
-            ctrl.style.display = 'flex';
-            ctrl.style.alignItems = 'center';
-            ctrl.appendChild(lbl);
-            lbl.addEventListener('click', function() {
-                var btn = ctrl.querySelector('button');
-                if (btn) btn.click();
-            });
-        }
-    }
-    addLabel();
-    new MutationObserver(addLabel).observe(window.parent.document.body, {childList:true, subtree:true});
-}
-</script>
-""", height=0)
 
 from models.solar import LocationConfig
 from services.geometry_builder import GeometryBuilder
@@ -123,15 +115,15 @@ def _render_hero_banner():
             '</div>'
             # Title + subtitle overlay — responsive positioning
             '<div style="'
-            'position:absolute; top:30%; right:4%; '
+            'position:absolute; top:20%; right:4%; '
             "font-family:'Inter','Segoe UI',system-ui,sans-serif; "
             'text-align:right;">'
-            '<div style="font-size:clamp(14px, 3vw, 22px); font-weight:700; color:#fff; '
+            '<div style="font-size:clamp(18px, 3.5vw, 28px); font-weight:700; color:#fff; '
             'letter-spacing:0.3px; text-shadow:0 1px 6px rgba(0,0,0,0.7);">'
             "Theo's Solar Gazer"
             '</div>'
-            '<div style="font-size:clamp(10px, 1.8vw, 13px); color:rgba(255,255,255,0.9); '
-            'font-weight:500; letter-spacing:0.4px; margin-top:2px; '
+            '<div style="font-size:clamp(12px, 2.2vw, 16px); color:rgba(255,255,255,0.9); '
+            'font-weight:500; letter-spacing:0.4px; margin-top:3px; '
             'text-shadow:0 1px 4px rgba(0,0,0,0.6);">'
             'Solar Path, Shadow &amp; Photovoltaic Analysis'
             '</div>'
@@ -387,9 +379,13 @@ def _show_how_to_use():
               "Click <b>Analyze with AI</b> to auto-detect dimensions, roof type, "
               "materials, and nearby structures. Requires an API key in .env."),
         _card("7", "Solar Panel Feasibility", "#10b981",
-              "Switch to <b>Solar Panel Feasibility</b> mode to estimate energy yield, "
-              "system sizing, and financial payback. Set your panel specs, adjust losses, "
-              "and enter your electricity rate to see payback period and 25-year NPV."),
+              "Switch to <b>Solar Panel Feasibility</b> mode using the toggle at the top of the sidebar. "
+              "Set your <b>building dimensions</b> and <b>location</b> as before &mdash; these define roof area and solar resource. "
+              "Configure <b>panel specs</b> (wattage, efficiency), <b>system losses</b> (soiling, shading, inverter), "
+              "and <b>financial parameters</b> (electricity rate, system cost, incentives). "
+              "The dashboard shows <b>KPI cards</b> (system size, annual kWh, payback, NPV, IRR), "
+              "a <b>monthly energy chart</b>, <b>hourly irradiance heatmap</b>, "
+              "<b>cumulative cash flow</b> graph, and a downloadable <b>CSV</b> of monthly results."),
         _card("", "Tips", "#6366f1",
               "<b>Drag</b> to rotate the 3D view, <b>scroll</b> to zoom in/out. "
               "The red <b>FRONT</b> marker shows building orientation. "
