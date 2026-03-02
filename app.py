@@ -41,20 +41,27 @@ st.markdown("""
         [data-testid="manage-app-button"] {
             display: none !important;
         }
-        /* Add "Open Settings" label next to sidebar toggle arrow on mobile */
-        [data-testid="stSidebarCollapsedControl"] {
-            display: flex !important;
+        /* Style for mobile settings hint bar */
+        .mobile-settings-hint {
+            display: flex;
             align-items: center;
-        }
-        [data-testid="stSidebarCollapsedControl"]::after {
-            content: "Open Settings";
+            gap: 6px;
+            padding: 8px 14px;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-family: 'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
             font-size: 13px;
             font-weight: 600;
-            color: #475569;
-            margin-left: 4px;
-            font-family: 'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
-            letter-spacing: 0.2px;
-            white-space: nowrap;
+            color: #0369a1;
+        }
+        .mobile-settings-hint .arrow {
+            font-size: 16px;
+        }
+        /* Only show on mobile */
+        @media (min-width: 768px) {
+            .mobile-settings-hint { display: none !important; }
         }
     }
     /* Hide bottom Streamlit footer and badges on all viewports */
@@ -157,6 +164,15 @@ def main():
 
     # Get building geometry
     geometry = get_building_geometry()
+
+    # Mobile hint to open sidebar
+    st.markdown(
+        '<div class="mobile-settings-hint">'
+        '<span class="arrow">&#9664;</span> '
+        'Open Settings to configure your analysis'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
     # Hero banner
     _render_hero_banner()
