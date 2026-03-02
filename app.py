@@ -41,28 +41,6 @@ st.markdown("""
         [data-testid="manage-app-button"] {
             display: none !important;
         }
-        /* Style for mobile settings hint bar */
-        .mobile-settings-hint {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 14px;
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-            border: 1px solid #bae6fd;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            font-family: 'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
-            font-size: 13px;
-            font-weight: 600;
-            color: #0369a1;
-        }
-        .mobile-settings-hint .arrow {
-            font-size: 16px;
-        }
-        /* Only show on mobile */
-        @media (min-width: 768px) {
-            .mobile-settings-hint { display: none !important; }
-        }
     }
     /* Hide bottom Streamlit footer and badges on all viewports */
     footer { display: none !important; }
@@ -77,6 +55,32 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# Inject "Open Settings >>" label next to sidebar toggle on mobile
+st.components.v1.html("""
+<script>
+if (window.innerWidth < 768) {
+    function addLabel() {
+        var ctrl = window.parent.document.querySelector('[data-testid="stSidebarCollapsedControl"]');
+        if (ctrl && !ctrl.querySelector('.settings-label')) {
+            var lbl = document.createElement('span');
+            lbl.className = 'settings-label';
+            lbl.textContent = 'Open Settings >>';
+            lbl.style.cssText = "font-size:13px; font-weight:600; color:#475569; margin-left:4px; font-family:'Inter','Segoe UI',system-ui,sans-serif; white-space:nowrap; cursor:pointer;";
+            ctrl.style.display = 'flex';
+            ctrl.style.alignItems = 'center';
+            ctrl.appendChild(lbl);
+            lbl.addEventListener('click', function() {
+                var btn = ctrl.querySelector('button');
+                if (btn) btn.click();
+            });
+        }
+    }
+    addLabel();
+    new MutationObserver(addLabel).observe(window.parent.document.body, {childList:true, subtree:true});
+}
+</script>
+""", height=0)
 
 from models.solar import LocationConfig
 from services.geometry_builder import GeometryBuilder
@@ -164,15 +168,6 @@ def main():
 
     # Get building geometry
     geometry = get_building_geometry()
-
-    # Mobile hint to open sidebar
-    st.markdown(
-        '<div class="mobile-settings-hint">'
-        '<span class="arrow">&#9664;</span> '
-        'Open Settings to configure your analysis'
-        '</div>',
-        unsafe_allow_html=True,
-    )
 
     # Hero banner
     _render_hero_banner()
