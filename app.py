@@ -22,6 +22,10 @@ st.markdown("""
     @media (min-width: 768px) {
         header[data-testid="stHeader"] { display: none !important; }
     }
+    /* On mobile, keep header visible but add padding so banner isn't hidden behind it */
+    @media (max-width: 767px) {
+        .block-container { padding-top: 3.5rem; }
+    }
     /* Sidebar polish */
     [data-testid="stSidebar"] { background: #f7f9fb; }
     [data-testid="stSidebar"] h1 { font-size: 1.3rem; }
@@ -30,21 +34,24 @@ st.markdown("""
     [data-testid="stMetric"] { padding: 4px 0; }
     [data-testid="stMetricValue"] { font-size: 0.95rem; }
     [data-testid="stMetricLabel"] { font-size: 0.85rem; }
-    /* Hide Streamlit branding elements on mobile (fork, GitHub, crown, Made with Streamlit) */
+    /* Hide Streamlit branding on mobile — keep sidebar toggle and header intact */
     @media (max-width: 768px) {
         .stDeployButton,
-        [data-testid="stToolbar"],
-        #MainMenu,
-        footer,
-        footer a,
-        [data-testid="manage-app-button"],
-        .viewerBadge_container__r5tak,
-        .styles_viewerBadge__CvC9N,
-        ._profileContainer_gzau3_53,
-        ._profilePreview_gzau3_63 {
+        [data-testid="stToolbarActions"],
+        [data-testid="manage-app-button"] {
             display: none !important;
-            visibility: hidden !important;
         }
+    }
+    /* Hide bottom Streamlit footer and badges on all viewports */
+    footer { display: none !important; }
+    .viewerBadge_container__r5tak,
+    .styles_viewerBadge__CvC9N,
+    ._profileContainer_gzau3_53,
+    ._profilePreview_gzau3_63,
+    [data-testid="stStreamlitBadge"],
+    .stAppDeployButton {
+        display: none !important;
+        visibility: hidden !important;
     }
 </style>
 """, unsafe_allow_html=True)
