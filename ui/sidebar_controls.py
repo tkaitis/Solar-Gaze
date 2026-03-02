@@ -17,28 +17,39 @@ def render_sidebar():
         st.title("Solar Gaze")
         st.caption("Enterprise Solar Path & Shadow Analysis")
 
-        # --- Building Images ---
-        ai_requested = _render_image_upload()
+        # --- Mode toggle ---
+        mode_options = ["Sunlight & Shadow", "Solar Panel Feasibility"]
+        current = 0 if st.session_state.get("app_mode") == "shadow" else 1
+        selected = st.radio(
+            "Analysis Mode",
+            mode_options,
+            index=current,
+            horizontal=True,
+            key="input_app_mode",
+        )
+        st.session_state.app_mode = "shadow" if selected == mode_options[0] else "pv"
 
         st.divider()
 
-        # --- Building Dimensions ---
-        _render_building_controls()
-
-        st.divider()
-
-        # --- Windows & Glass Walls ---
-        _render_window_controls()
-
-        st.divider()
-
-        # --- Location ---
-        _render_location_controls()
-
-        st.divider()
-
-        # --- Date & Time ---
-        _render_datetime_controls()
+        if st.session_state.app_mode == "shadow":
+            # --- Shadow mode: full original sidebar ---
+            ai_requested = _render_image_upload()
+            st.divider()
+            _render_building_controls()
+            st.divider()
+            _render_window_controls()
+            st.divider()
+            _render_location_controls()
+            st.divider()
+            _render_datetime_controls()
+        else:
+            # --- PV mode: building + location (shared) + PV-specific ---
+            _render_building_controls()
+            st.divider()
+            _render_location_controls()
+            st.divider()
+            from ui.pv_sidebar import render_pv_sidebar
+            render_pv_sidebar()
 
     return ai_requested
 

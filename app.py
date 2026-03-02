@@ -38,10 +38,13 @@ from services.geometry_builder import GeometryBuilder
 from services.light_calculator import LightCalculator
 from services.shadow_calculator import ShadowCalculator
 from services.solar_engine import SolarEngine
+from services.pv_calculator import PVCalculator
 from visualization.scene_3d import Scene3D
 from ui.analysis_panel import render_analysis_panel
 from ui.session_state import init_session_state, get_building_geometry, get_selected_datetime, get_window_config
 from ui.sidebar_controls import render_sidebar
+from ui.pv_sidebar import get_roof_pv_config, get_panel_spec, get_system_losses, get_financial_params
+from ui.pv_dashboard import render_pv_dashboard
 
 LOGO_PATH = os.path.join(os.path.dirname(__file__), "assets", "cigdem_flower2.jpeg")
 HERO_PATH = os.path.join(os.path.dirname(__file__), "assets", "hero_banner.png")
@@ -117,6 +120,32 @@ def main():
     # Get building geometry
     geometry = get_building_geometry()
 
+    # Hero banner
+    _render_hero_banner()
+
+    # Help button (right-aligned, professional)
+    help_cols = st.columns([3, 1])
+    with help_cols[1]:
+        help_label = "Hide Guide" if st.session_state.get("show_help") else "How to Use"
+        if st.button(help_label, key="how_to_use_btn", type="secondary", use_container_width=True):
+            st.session_state["show_help"] = not st.session_state.get("show_help", False)
+            st.rerun()
+
+    if st.session_state.get("show_help"):
+        _show_how_to_use()
+
+    # --- Route by mode ---
+    app_mode = st.session_state.get("app_mode", "shadow")
+
+    if app_mode == "pv":
+        _run_pv_mode(location, geometry)
+    else:
+        _run_shadow_mode(location, geometry)
+
+
+def _run_shadow_mode(location: LocationConfig, geometry):
+    """Original shadow/sunlight analysis flow."""
+
     # Get selected datetime
     dt = get_selected_datetime()
 
@@ -147,20 +176,6 @@ def main():
     nearby = None
     if st.session_state.get("ai_analysis"):
         nearby = st.session_state["ai_analysis"].nearby_structures or None
-
-    # Hero banner
-    _render_hero_banner()
-
-    # Help button (right-aligned, professional)
-    help_cols = st.columns([3, 1])
-    with help_cols[1]:
-        help_label = "Hide Guide" if st.session_state.get("show_help") else "How to Use"
-        if st.button(help_label, key="how_to_use_btn", type="secondary", use_container_width=True):
-            st.session_state["show_help"] = not st.session_state.get("show_help", False)
-            st.rerun()
-
-    if st.session_state.get("show_help"):
-        _show_how_to_use()
 
     # Show AI analysis results or errors
     _show_ai_results_banner()
@@ -240,6 +255,52 @@ def main():
     render_analysis_panel(sun_position, sun_path, shadow, geometry, light_patches)
 
 
+def _run_pv_mode(location: LocationConfig, geometry):
+    """Solar Panel Feasibility analysis flow."""
+    roof = get_roof_pv_config()
+    panel = get_panel_spec()
+    losses = get_system_losses()
+    financial = get_financial_params()
+
+    with st.spinner("Computing PV feasibility..."):
+        result = PVCalculator.compute_feasibility(
+            lat=location.latitude,
+            lon=location.longitude,
+            tz=location.timezone,
+            width=geometry.width,
+            depth=geometry.depth,
+            roof_pitch=geometry.roof_pitch,
+            roof_type=geometry.roof_type,
+            tilt_deg=roof.tilt_deg,
+            azimuth_deg=roof.azimuth_deg,
+            usable_roof_pct=roof.usable_roof_pct,
+            auto_tilt=roof.auto_tilt,
+            auto_azimuth=roof.auto_azimuth,
+            rated_power_w=panel.rated_power_w,
+            efficiency_pct=panel.efficiency_pct,
+            temp_coeff_pmax=panel.temp_coeff_pmax,
+            noct_c=panel.noct_c,
+            panel_area_m2=panel.panel_area_m2,
+            soiling=losses.soiling,
+            shading=losses.shading,
+            mismatch=losses.mismatch,
+            wiring_dc=losses.wiring_dc,
+            wiring_ac=losses.wiring_ac,
+            inverter_eff=losses.inverter_eff,
+            availability=losses.availability,
+            electricity_rate=financial.electricity_rate,
+            escalation=financial.escalation,
+            cost_per_watt=financial.cost_per_watt,
+            incentive_pct=financial.incentive_pct,
+            degradation=financial.degradation,
+            discount_rate=financial.discount_rate,
+            analysis_period=financial.analysis_period,
+            om_cost=financial.om_cost,
+        )
+
+    render_pv_dashboard(result)
+
+
 def _show_how_to_use():
     """Display a professional how-to-use guide as a dismissible panel."""
 
@@ -276,6 +337,10 @@ def _show_how_to_use():
               "Upload an <b>aerial screenshot</b> and/or <b>front photo</b>. "
               "Click <b>Analyze with AI</b> to auto-detect dimensions, roof type, "
               "materials, and nearby structures. Requires an API key in .env."),
+        _card("7", "Solar Panel Feasibility", "#10b981",
+              "Switch to <b>Solar Panel Feasibility</b> mode to estimate energy yield, "
+              "system sizing, and financial payback. Set your panel specs, adjust losses, "
+              "and enter your electricity rate to see payback period and 25-year NPV."),
         _card("", "Tips", "#6366f1",
               "<b>Drag</b> to rotate the 3D view, <b>scroll</b> to zoom in/out. "
               "The red <b>FRONT</b> marker shows building orientation. "

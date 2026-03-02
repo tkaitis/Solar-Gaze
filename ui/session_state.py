@@ -183,6 +183,37 @@ def init_session_state():
         "transparent_building": False,
         # UI
         "show_help": False,
+        # App mode
+        "app_mode": "shadow",
+        # PV — Roof & Orientation
+        "pv_tilt_deg": 30.0,
+        "pv_azimuth_deg": 180.0,
+        "pv_usable_roof_pct": 70.0,
+        "pv_auto_tilt": True,
+        "pv_auto_azimuth": True,
+        # PV — Panel Specs
+        "pv_rated_power": 400.0,
+        "pv_efficiency": 21.0,
+        "pv_temp_coeff": -0.35,
+        "pv_noct": 45.0,
+        "pv_panel_area": 1.92,
+        # PV — System Losses
+        "pv_soiling": 2.0,
+        "pv_shading": 3.0,
+        "pv_mismatch": 2.0,
+        "pv_wiring_dc": 2.0,
+        "pv_wiring_ac": 1.0,
+        "pv_inverter_eff": 96.0,
+        "pv_availability": 99.0,
+        # PV — Financial
+        "pv_electricity_rate": 0.15,
+        "pv_escalation": 2.5,
+        "pv_cost_per_watt": 2.80,
+        "pv_incentive_pct": 30.0,
+        "pv_degradation": 0.5,
+        "pv_discount_rate": 5.0,
+        "pv_analysis_period": 25,
+        "pv_om_cost": 20.0,
     }
 
     for key, value in defaults.items():
