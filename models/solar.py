@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LocationConfig(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
     timezone: str = "America/Los_Angeles"
@@ -15,10 +16,11 @@ class LocationConfig(BaseModel):
 
 
 class SolarPosition(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     azimuth: float = Field(description="Degrees from north, clockwise")
     elevation: float = Field(description="Degrees above horizon")
     zenith: float = Field(description="Degrees from vertical")
-    timestamp: datetime
+    timestamp: Any  # datetime, but accept cached/deserialized variants
 
     @property
     def is_above_horizon(self) -> bool:
@@ -37,12 +39,13 @@ class SolarPosition(BaseModel):
 
 
 class SunPath(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     positions: list[SolarPosition]
-    sunrise: datetime | None = None
-    sunset: datetime | None = None
-    solar_noon: datetime | None = None
+    sunrise: Any = None
+    sunset: Any = None
+    solar_noon: Any = None
     day_length_hours: float = 0.0
-    date: date
+    date: Any  # date, but accept cached/deserialized variants
 
     @property
     def above_horizon(self) -> list[SolarPosition]:
@@ -50,19 +53,21 @@ class SunPath(BaseModel):
 
 
 class LightPatchResult(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     """Sun light patch projected onto the interior floor through a window."""
     wall_name: str = Field(description="Which wall: south, north, east, west")
-    patch_vertices: list[tuple[float, float]] = Field(
+    patch_vertices: list = Field(
         description="2D polygon vertices (x, y) on the interior floor"
     )
     patch_area: float = Field(description="Light patch area in m²")
-    window_corners_3d: list[tuple[float, float, float]] = Field(
+    window_corners_3d: list = Field(
         description="4 corners of the window aperture in 3D for rendering"
     )
 
 
 class ShadowResult(BaseModel):
-    shadow_vertices: list[tuple[float, float]] = Field(
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    shadow_vertices: list = Field(
         description="2D polygon vertices (x, y) on ground plane"
     )
     shadow_length: float = Field(description="Maximum shadow extent in meters")
@@ -70,4 +75,4 @@ class ShadowResult(BaseModel):
     shadow_bearing: float = Field(
         description="Direction shadow points, degrees from north"
     )
-    sun_position: SolarPosition
+    sun_position: Any  # SolarPosition, accept cached/deserialized variants

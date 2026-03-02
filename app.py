@@ -27,7 +27,7 @@ st.markdown("""
         .block-container { padding-top: 3.5rem; }
         /* "Open Settings >>" label in header next to toggle */
         header[data-testid="stHeader"]::after {
-            content: "Open Settings \00BB";
+            content: "Open Settings >>";
             position: absolute;
             left: 3.2rem;
             top: 50%;
