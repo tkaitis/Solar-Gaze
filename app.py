@@ -30,6 +30,22 @@ st.markdown("""
     [data-testid="stMetric"] { padding: 4px 0; }
     [data-testid="stMetricValue"] { font-size: 0.95rem; }
     [data-testid="stMetricLabel"] { font-size: 0.85rem; }
+    /* Hide Streamlit branding elements on mobile (fork, GitHub, crown, Made with Streamlit) */
+    @media (max-width: 768px) {
+        .stDeployButton,
+        [data-testid="stToolbar"],
+        #MainMenu,
+        footer,
+        footer a,
+        [data-testid="manage-app-button"],
+        .viewerBadge_container__r5tak,
+        .styles_viewerBadge__CvC9N,
+        ._profileContainer_gzau3_53,
+        ._profilePreview_gzau3_63 {
+            display: none !important;
+            visibility: hidden !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
